@@ -150,3 +150,7 @@ MIT — ten patch jest public domain. Używaj jak chcesz.
 - **Strona:** https://nerudek.github.io/claw-deepseek-fix
 - **Upstream issue:** https://github.com/ultraworkers/claw-code/issues/2821
 - **Related:** https://github.com/zeroclaw-labs/zeroclaw/issues/6298
+
+---
+
+If this saved you time: [☕ PayPal.me/nerudek](https://www.paypal.me/nerudek)
