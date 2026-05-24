@@ -694,11 +694,18 @@ fn translate_message(message: &InputMessage) -> Vec<Value> {
             if text.is_empty() && tool_calls.is_empty() {
                 Vec::new()
             } else {
-                vec![json!({
+                let mut msg = json!({
                     "role": "assistant",
                     "content": (!text.is_empty()).then_some(text),
-                    "tool_calls": tool_calls,
-                })]
+                });
+                // DeepSeek API rejects empty tool_calls array
+                // Only include tool_calls when non-empty
+                if !tool_calls.is_empty() {
+                    msg.as_object_mut()
+                        .unwrap()
+                        .insert("tool_calls".to_string(), json!(tool_calls));
+                }
+                vec![msg]
             }
         }
         _ => message
