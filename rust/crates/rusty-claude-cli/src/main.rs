@@ -3465,6 +3465,9 @@ fn render_export_text(session: &Session) -> String {
                         "[tool_result id={tool_use_id} name={tool_name} error={is_error}] {output}"
                     ));
                 }
+                ContentBlock::Reasoning { reasoning_content } => {
+                    lines.push(format!("[reasoning] {reasoning_content}"));
+                }
             }
         }
         lines.push(String::new());
@@ -4899,6 +4902,11 @@ fn push_output_block(
             *pending_tool = Some((id, name, initial_input));
         }
         OutputContentBlock::Thinking { .. } | OutputContentBlock::RedactedThinking { .. } => {}
+        OutputContentBlock::ReasoningContent { reasoning_content } => {
+            if !reasoning_content.is_empty() {
+                events.push(AssistantEvent::Reasoning(reasoning_content));
+            }
+        }
     }
     Ok(())
 }
@@ -5044,6 +5052,9 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
                             text: output.clone(),
                         }],
                         is_error: *is_error,
+                    },
+                    ContentBlock::Reasoning { reasoning_content } => InputContentBlock::ReasoningContent {
+                        reasoning_content: reasoning_content.clone(),
                     },
                 })
                 .collect::<Vec<_>>();

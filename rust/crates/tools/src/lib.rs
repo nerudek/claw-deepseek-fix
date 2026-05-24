@@ -2975,6 +2975,9 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
                         }],
                         is_error: *is_error,
                     },
+                    ContentBlock::Reasoning { reasoning_content } => InputContentBlock::ReasoningContent {
+                        reasoning_content: reasoning_content.clone(),
+                    },
                 })
                 .collect::<Vec<_>>();
             (!content.is_empty()).then(|| InputMessage {
@@ -3009,7 +3012,7 @@ fn push_output_block(
             };
             pending_tools.insert(block_index, (id, name, initial_input));
         }
-        OutputContentBlock::Thinking { .. } | OutputContentBlock::RedactedThinking { .. } => {}
+        OutputContentBlock::Thinking { .. } | OutputContentBlock::RedactedThinking { .. } | OutputContentBlock::ReasoningContent { .. } => {}
     }
 }
 

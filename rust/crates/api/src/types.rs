@@ -76,6 +76,9 @@ pub enum InputContentBlock {
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         is_error: bool,
     },
+    ReasoningContent {
+        reasoning_content: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -144,6 +147,9 @@ pub enum OutputContentBlock {
     },
     RedactedThinking {
         data: Value,
+    },
+    ReasoningContent {
+        reasoning_content: String,
     },
 }
 

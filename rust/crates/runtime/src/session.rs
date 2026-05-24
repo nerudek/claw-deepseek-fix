@@ -38,6 +38,9 @@ pub enum ContentBlock {
         output: String,
         is_error: bool,
     },
+    Reasoning {
+        reasoning_content: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -602,6 +605,16 @@ impl ContentBlock {
                 object.insert("output".to_string(), JsonValue::String(output.clone()));
                 object.insert("is_error".to_string(), JsonValue::Bool(*is_error));
             }
+            Self::Reasoning { reasoning_content } => {
+                object.insert(
+                    "type".to_string(),
+                    JsonValue::String("reasoning".to_string()),
+                );
+                object.insert(
+                    "reasoning_content".to_string(),
+                    JsonValue::String(reasoning_content.clone()),
+                );
+            }
         }
         JsonValue::Object(object)
     }
@@ -631,6 +644,9 @@ impl ContentBlock {
                     .get("is_error")
                     .and_then(JsonValue::as_bool)
                     .ok_or_else(|| SessionError::Format("missing is_error".to_string()))?,
+            }),
+            "reasoning" => Ok(Self::Reasoning {
+                reasoning_content: required_string(object, "reasoning_content")?,
             }),
             other => Err(SessionError::Format(format!(
                 "unsupported block type: {other}"

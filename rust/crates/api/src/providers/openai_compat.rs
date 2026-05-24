@@ -308,6 +308,7 @@ struct StreamState {
     message_started: bool,
     text_started: bool,
     text_finished: bool,
+    reasoning_started: bool,
     finished: bool,
     stop_reason: Option<String>,
     usage: Option<Usage>,
@@ -321,6 +322,7 @@ impl StreamState {
             message_started: false,
             text_started: false,
             text_finished: false,
+            reasoning_started: false,
             finished: false,
             stop_reason: None,
             usage: None,
@@ -375,6 +377,23 @@ impl StreamState {
                 events.push(StreamEvent::ContentBlockDelta(ContentBlockDeltaEvent {
                     index: 0,
                     delta: ContentBlockDelta::TextDelta { text: content },
+                }));
+            }
+
+            // DeepSeek V4 sends reasoning_content in streaming deltas
+            if let Some(reasoning) = choice.delta.reasoning_content.filter(|value| !value.is_empty()) {
+                if !self.reasoning_started {
+                    self.reasoning_started = true;
+                    events.push(StreamEvent::ContentBlockStart(ContentBlockStartEvent {
+                        index: 1,
+                        content_block: OutputContentBlock::ReasoningContent {
+                            reasoning_content: String::new(),
+                        },
+                    }));
+                }
+                events.push(StreamEvent::ContentBlockDelta(ContentBlockDeltaEvent {
+                    index: 1,
+                    delta: ContentBlockDelta::TextDelta { text: reasoning },
                 }));
             }
 
@@ -560,6 +579,8 @@ struct ChatMessage {
     content: Option<String>,
     #[serde(default)]
     tool_calls: Vec<ResponseToolCall>,
+    #[serde(default)]
+    reasoning_content: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -606,6 +627,8 @@ struct ChunkDelta {
     content: Option<String>,
     #[serde(default)]
     tool_calls: Vec<DeltaToolCall>,
+    #[serde(default)]
+    reasoning_content: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -677,6 +700,7 @@ fn translate_message(message: &InputMessage) -> Vec<Value> {
         "assistant" => {
             let mut text = String::new();
             let mut tool_calls = Vec::new();
+            let mut reasoning_content = String::new();
             for block in &message.content {
                 match block {
                     InputContentBlock::Text { text: value } => text.push_str(value),
@@ -688,10 +712,13 @@ fn translate_message(message: &InputMessage) -> Vec<Value> {
                             "arguments": input.to_string(),
                         }
                     })),
+                    InputContentBlock::ReasoningContent { reasoning_content: value } => {
+                        reasoning_content.push_str(value)
+                    }
                     InputContentBlock::ToolResult { .. } => {}
                 }
             }
-            if text.is_empty() && tool_calls.is_empty() {
+            if text.is_empty() && tool_calls.is_empty() && reasoning_content.is_empty() {
                 Vec::new()
             } else {
                 let mut msg = json!({
@@ -705,6 +732,11 @@ fn translate_message(message: &InputMessage) -> Vec<Value> {
                         .unwrap()
                         .insert("tool_calls".to_string(), json!(tool_calls));
                 }
+                // DeepSeek V4 requires reasoning_content to be passed back
+                // Always include it (even empty) for assistant messages
+                msg.as_object_mut()
+                    .unwrap()
+                    .insert("reasoning_content".to_string(), json!(reasoning_content));
                 vec![msg]
             }
         }
@@ -727,6 +759,7 @@ fn translate_message(message: &InputMessage) -> Vec<Value> {
                     "is_error": is_error,
                 })),
                 InputContentBlock::ToolUse { .. } => None,
+                InputContentBlock::ReasoningContent { .. } => None,
             })
             .collect(),
     }
@@ -783,6 +816,12 @@ fn normalize_response(
     let mut content = Vec::new();
     if let Some(text) = choice.message.content.filter(|value| !value.is_empty()) {
         content.push(OutputContentBlock::Text { text });
+    }
+    // DeepSeek V4 returns reasoning_content that must be preserved
+    if let Some(reasoning) = choice.message.reasoning_content.filter(|value| !value.is_empty()) {
+        content.push(OutputContentBlock::ReasoningContent {
+            reasoning_content: reasoning,
+        });
     }
     for tool_call in choice.message.tool_calls {
         content.push(OutputContentBlock::ToolUse {

@@ -27,6 +27,7 @@ pub struct ApiRequest {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssistantEvent {
     TextDelta(String),
+    Reasoning(String),
     ToolUse {
         id: String,
         name: String,
@@ -673,6 +674,10 @@ fn build_assistant_message(
     for event in events {
         match event {
             AssistantEvent::TextDelta(delta) => text.push_str(&delta),
+            AssistantEvent::Reasoning(reasoning_content) => {
+                flush_text_block(&mut text, &mut blocks);
+                blocks.push(ContentBlock::Reasoning { reasoning_content });
+            }
             AssistantEvent::ToolUse { id, name, input } => {
                 flush_text_block(&mut text, &mut blocks);
                 blocks.push(ContentBlock::ToolUse { id, name, input });
