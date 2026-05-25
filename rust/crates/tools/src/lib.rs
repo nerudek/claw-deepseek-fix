@@ -127,7 +127,10 @@ impl GlobalToolRegistry {
             }
         }
 
-        Ok(Self { plugin_tools, enforcer: None })
+        Ok(Self {
+            plugin_tools,
+            enforcer: None,
+        })
     }
 
     #[must_use]
@@ -1014,7 +1017,10 @@ fn run_ask_user_question(input: AskUserQuestionInput) -> Result<String, String> 
 
     // Read user response from stdin
     let mut response = String::new();
-    stdin.lock().read_line(&mut response).map_err(|e| e.to_string())?;
+    stdin
+        .lock()
+        .read_line(&mut response)
+        .map_err(|e| e.to_string())?;
     let response = response.trim().to_string();
 
     // If options were provided, resolve the numeric choice
@@ -1347,7 +1353,11 @@ fn run_remote_trigger(input: RemoteTriggerInput) -> Result<String, String> {
             let status = response.status().as_u16();
             let body = response.text().unwrap_or_default();
             let truncated_body = if body.len() > 8192 {
-                format!("{}\n\n[response truncated — {} bytes total]", &body[..8192], body.len())
+                format!(
+                    "{}\n\n[response truncated — {} bytes total]",
+                    &body[..8192],
+                    body.len()
+                )
             } else {
                 body
             };
@@ -2915,7 +2925,10 @@ struct SubagentToolExecutor {
 
 impl SubagentToolExecutor {
     fn new(allowed_tools: BTreeSet<String>) -> Self {
-        Self { allowed_tools, enforcer: None }
+        Self {
+            allowed_tools,
+            enforcer: None,
+        }
     }
 
     fn with_enforcer(mut self, enforcer: PermissionEnforcer) -> Self {
@@ -2933,7 +2946,8 @@ impl ToolExecutor for SubagentToolExecutor {
         }
         let value = serde_json::from_str(input)
             .map_err(|error| ToolError::new(format!("invalid tool input JSON: {error}")))?;
-        execute_tool_with_enforcer(self.enforcer.as_ref(), tool_name, &value).map_err(ToolError::new)
+        execute_tool_with_enforcer(self.enforcer.as_ref(), tool_name, &value)
+            .map_err(ToolError::new)
     }
 }
 
@@ -2975,9 +2989,11 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
                         }],
                         is_error: *is_error,
                     },
-                    ContentBlock::Reasoning { reasoning_content } => InputContentBlock::ReasoningContent {
-                        reasoning_content: reasoning_content.clone(),
-                    },
+                    ContentBlock::Reasoning { reasoning_content } => {
+                        InputContentBlock::ReasoningContent {
+                            reasoning_content: reasoning_content.clone(),
+                        }
+                    }
                 })
                 .collect::<Vec<_>>();
             (!content.is_empty()).then(|| InputMessage {
@@ -3012,7 +3028,9 @@ fn push_output_block(
             };
             pending_tools.insert(block_index, (id, name, initial_input));
         }
-        OutputContentBlock::Thinking { .. } | OutputContentBlock::RedactedThinking { .. } | OutputContentBlock::ReasoningContent { .. } => {}
+        OutputContentBlock::Thinking { .. }
+        | OutputContentBlock::RedactedThinking { .. }
+        | OutputContentBlock::ReasoningContent { .. } => {}
     }
 }
 
@@ -4335,8 +4353,8 @@ mod tests {
     use super::{
         agent_permission_policy, allowed_tools_for_subagent, execute_agent_with_spawn,
         execute_tool, final_assistant_text, mvp_tool_specs, permission_mode_from_plugin,
-        persist_agent_terminal_state, push_output_block, AgentInput, AgentJob,
-        GlobalToolRegistry, SubagentToolExecutor,
+        persist_agent_terminal_state, push_output_block, AgentInput, AgentJob, GlobalToolRegistry,
+        SubagentToolExecutor,
     };
     use api::OutputContentBlock;
     use runtime::{
@@ -4359,10 +4377,11 @@ mod tests {
     }
 
     fn permission_policy_for_mode(mode: PermissionMode) -> PermissionPolicy {
-        mvp_tool_specs().into_iter().fold(
-            PermissionPolicy::new(mode),
-            |policy, spec| policy.with_tool_requirement(spec.name, spec.required_permission),
-        )
+        mvp_tool_specs()
+            .into_iter()
+            .fold(PermissionPolicy::new(mode), |policy, spec| {
+                policy.with_tool_requirement(spec.name, spec.required_permission)
+            })
     }
 
     #[test]
@@ -4437,7 +4456,9 @@ mod tests {
             .expect_err("subagent write tool should be denied before dispatch");
 
         // then
-        assert!(error.to_string().contains("requires workspace-write permission"));
+        assert!(error
+            .to_string()
+            .contains("requires workspace-write permission"));
     }
 
     #[test]
@@ -5929,7 +5950,10 @@ printf 'pwsh:%s' "$1"
     fn given_read_only_enforcer_when_write_file_then_denied() {
         let registry = read_only_registry();
         let err = registry
-            .execute("write_file", &json!({ "path": "/tmp/x.txt", "content": "x" }))
+            .execute(
+                "write_file",
+                &json!({ "path": "/tmp/x.txt", "content": "x" }),
+            )
             .expect_err("write_file should be denied in read-only mode");
         assert!(
             err.contains("current mode is read-only"),
@@ -5963,10 +5987,7 @@ printf 'pwsh:%s' "$1"
         fs::write(&file, "content\n").expect("write test file");
 
         let registry = read_only_registry();
-        let result = registry.execute(
-            "read_file",
-            &json!({ "path": file.display().to_string() }),
-        );
+        let result = registry.execute("read_file", &json!({ "path": file.display().to_string() }));
         assert!(result.is_ok(), "read_file should be allowed: {result:?}");
 
         let _ = fs::remove_dir_all(root);

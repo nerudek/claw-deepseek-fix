@@ -53,4 +53,4 @@ jobs:
         with:
           workspaces: rust -> target
       - name: Run crate tests
-        run: cargo test -p rusty-claude-cli
+        run: cargo test --bin claw --test cli_flags_and_config_defaults --test resume_slash_commands

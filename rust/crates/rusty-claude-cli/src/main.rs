@@ -40,10 +40,9 @@ use plugins::{PluginHooks, PluginManager, PluginManagerConfig, PluginRegistry};
 use render::{MarkdownStreamState, Spinner, TerminalRenderer};
 use runtime::{
     clear_oauth_credentials, generate_pkce_pair, generate_state, load_system_prompt,
-    parse_oauth_callback_request_target, resolve_sandbox_status, save_oauth_credentials,
-    ApiClient, ApiRequest, AssistantEvent,
-    CompactionConfig, ConfigLoader, ConfigSource, ContentBlock, ConversationMessage,
-    ConversationRuntime, MessageRole, OAuthAuthorizationRequest, OAuthConfig,
+    parse_oauth_callback_request_target, resolve_sandbox_status, save_oauth_credentials, ApiClient,
+    ApiRequest, AssistantEvent, CompactionConfig, ConfigLoader, ConfigSource, ContentBlock,
+    ConversationMessage, ConversationRuntime, MessageRole, OAuthAuthorizationRequest, OAuthConfig,
     OAuthTokenExchangeRequest, PermissionMode, PermissionPolicy, ProjectContext, PromptCacheEvent,
     ResolvedPermissionMode, RuntimeError, Session, TokenUsage, ToolError, ToolExecutor,
     UsageTracker,
@@ -4114,12 +4113,9 @@ impl AnthropicRuntimeClient {
         progress_reporter: Option<InternalPromptProgressReporter>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let anthropic_auth = resolve_cli_auth_source().ok();
-        let client = api::ProviderClient::from_model_with_anthropic_auth(
-            &model,
-            anthropic_auth,
-        )
-        .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?
-        .with_prompt_cache(PromptCache::new(session_id));
+        let client = api::ProviderClient::from_model_with_anthropic_auth(&model, anthropic_auth)
+            .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?
+            .with_prompt_cache(PromptCache::new(session_id));
         Ok(Self {
             runtime: tokio::runtime::Runtime::new()?,
             client,
@@ -5053,9 +5049,11 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
                         }],
                         is_error: *is_error,
                     },
-                    ContentBlock::Reasoning { reasoning_content } => InputContentBlock::ReasoningContent {
-                        reasoning_content: reasoning_content.clone(),
-                    },
+                    ContentBlock::Reasoning { reasoning_content } => {
+                        InputContentBlock::ReasoningContent {
+                            reasoning_content: reasoning_content.clone(),
+                        }
+                    }
                 })
                 .collect::<Vec<_>>();
             (!content.is_empty()).then(|| InputMessage {
@@ -5928,7 +5926,11 @@ mod tests {
             .map(|spec| spec.name)
             .collect::<Vec<_>>();
         // Now with 135+ slash commands, verify minimum resume support
-        assert!(names.len() >= 39, "expected at least 39 resume-supported commands, got {}", names.len());
+        assert!(
+            names.len() >= 39,
+            "expected at least 39 resume-supported commands, got {}",
+            names.len()
+        );
         // Verify key resume commands still exist
         assert!(names.contains(&"help"));
         assert!(names.contains(&"status"));

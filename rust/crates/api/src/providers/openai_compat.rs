@@ -381,7 +381,11 @@ impl StreamState {
             }
 
             // DeepSeek V4 sends reasoning_content in streaming deltas
-            if let Some(reasoning) = choice.delta.reasoning_content.filter(|value| !value.is_empty()) {
+            if let Some(reasoning) = choice
+                .delta
+                .reasoning_content
+                .filter(|value| !value.is_empty())
+            {
                 if !self.reasoning_started {
                     self.reasoning_started = true;
                     events.push(StreamEvent::ContentBlockStart(ContentBlockStartEvent {
@@ -712,9 +716,9 @@ fn translate_message(message: &InputMessage) -> Vec<Value> {
                             "arguments": input.to_string(),
                         }
                     })),
-                    InputContentBlock::ReasoningContent { reasoning_content: value } => {
-                        reasoning_content.push_str(value)
-                    }
+                    InputContentBlock::ReasoningContent {
+                        reasoning_content: value,
+                    } => reasoning_content.push_str(value),
                     InputContentBlock::ToolResult { .. } => {}
                 }
             }
@@ -818,7 +822,11 @@ fn normalize_response(
         content.push(OutputContentBlock::Text { text });
     }
     // DeepSeek V4 returns reasoning_content that must be preserved
-    if let Some(reasoning) = choice.message.reasoning_content.filter(|value| !value.is_empty()) {
+    if let Some(reasoning) = choice
+        .message
+        .reasoning_content
+        .filter(|value| !value.is_empty())
+    {
         content.push(OutputContentBlock::ReasoningContent {
             reasoning_content: reasoning,
         });
